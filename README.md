@@ -1,8 +1,8 @@
 # QGIS PLUGIN NAVI SURVEY RTK 1.0 ![](icon.png)
 
-	Navi Survey_RTK es un desarrollo de Qgis plugin para facilitar la navegacion en campo y recoleccion de puntos para estudios posteriores, cuando usamos nuestro dispositivo en conjunto con un sistema RTK o GNSS normal
+Navi Survey_RTK es un desarrollo de Qgis plugin para facilitar la navegacion en campo y recoleccion de puntos para estudios posteriores, cuando usamos nuestro dispositivo en conjunto con un sistema RTK o GNSS normal
 
-	La herramienta tiene como principales funciones facilitar la captuda de puntos en campo en tiempo real.
+La herramienta tiene como principales funciones facilitar la captuda de puntos en campo en tiempo real.
 Los puntos son almacenados de forma dinamica en una capa previamente definida y de acuerdo a parametros de calidad establecidos.
 Estos son usados para posteriones generaciones de Modelos de Elevacion de los terremos analizados para poder establecer curvas a nivel para sistemas de riego por gravedad
   
@@ -18,7 +18,7 @@ Para su intalacion en qgis, solo es necesario copiar el repositorio en la direcc
 
 En Windown:
 
-    C:\Users\username\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\
+	C:\Users\username\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\
 
 En Linux:
 

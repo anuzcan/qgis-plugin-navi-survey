@@ -7,11 +7,11 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QAction, QMessageBox
 
 from qgis import utils
-from qgis.core import Qgis, QgsApplication
+from qgis.core import Qgis, QgsApplication, QgsProject
 
 
 #Importacion metodos
-
+from .layerMake import layerMake
 
 def classFactory(iface):
     return Main_Plugin(iface)
@@ -37,6 +37,7 @@ class Main_Plugin:
         self.dock.setRotationButton.clicked.connect(self.rotationMap)
         self.dock.zoomInbutton.clicked.connect(self.zoomInMapCanvas)
         self.dock.zoomOutbutton.clicked.connect(self.zoomOutMapCanvas)
+        self.dock.buttonSelectLayer.clicked.connect(self.SelectLayerSurvey)
 
         #Definicion de banderas 
         self.flatRotationMap = False
@@ -112,3 +113,7 @@ class Main_Plugin:
             self.dock.setRotationButton.setStyleSheet("QPushButton{background-color : lightgrey;}")
             self.flatRotationMap = False
 
+    def SelectLayerSurvey(self):
+
+        self.layerSurvey = layerMake(
+            QgsProject().instance().mapLayersByName(self.dock.mMapLayerComboBox.currentText())[0])
