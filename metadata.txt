@@ -1,9 +1,9 @@
 [general]
-name=ATN_survey
+name=qgis_plugin_navi_survey
 description=Plugin para captura de puntos en campo
-about=Actualizacion
+about=Plugin desarrollado por ATN agricola desarrollos
 version=1.0
 qgisMinimumVersion=3.0
 author=Pablo Núñez Canales
 email=agritecnologiacr@outlook.com
-repository=URL to the code repository
+repository=https://github.com/anuzcan/qgis-plugin-navi-survey
