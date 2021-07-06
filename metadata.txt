@@ -1,0 +1,9 @@
+[general]
+name=ATN_survey
+description=Plugin para captura de puntos en campo
+about=Actualizacion
+version=1.0
+qgisMinimumVersion=3.0
+author=Pablo Núñez Canales
+email=agritecnologiacr@outlook.com
+repository=URL to the code repository
