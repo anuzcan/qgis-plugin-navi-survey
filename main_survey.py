@@ -60,25 +60,20 @@ class Main_Plugin:
         self.dock.buttonGpsDesactive.setEnabled(False)
         self.dock.setRotationButton.setEnabled(False)
         
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.read_Device)
+
         self.timerDevice = QTimer()
         self.timerDevice.timeout.connect(self.testSignal)
+
+        self.rumbo = direction(clockwise=True) # Variable para procesar rumbo y distancias entre puntos
 
         self.device = self.testSignal() # Se comprueba que se disponga de un dispositivo valido conectado
         
         #self.guide = guide(self.iface.mapCanvas())
         #self.guide.paint()
         #self.guide.erase()
-
-        #Si dispositivo conectado, iniciamos contador de lectura de datos
-        if self.device == True:
-
-            self.timer = QTimer()
-            self.timer.timeout.connect(self.read_Device)
-            self.timer.start(1000)
-
-            self.dock.setRotationButton.setEnabled(True)
-            self.rumbo = direction(clockwise=True) # Variable para procesar rumbo y distancias entre puntos
-        
+            
         #Agregamos panel a interface
         self.iface.addDockWidget( Qt.RightDockWidgetArea, self.dock )
 
@@ -90,13 +85,14 @@ class Main_Plugin:
             QgsProject().instance().mapLayersByName(self.dock.mMapLayerComboBox.currentText())[0],
             filt = self.dock.comboBox_Fix.currentText())
 
-        if self.layerSurvey.error == False: # si no hay error 
-            utils.iface.messageBar().pushMessage("Correcto "," Capa valida",level=Qgis.Info,duration=5)
+        if self.layerSurvey.error == False:
+            utils.iface.messageBar().pushMessage("Correcto "," Capa valida",level=Qgis.Info,duration=3)
             
             if self.device == True:
                 self.dock.buttonGpsActive.setEnabled(True) # Habilitamos el inicio de captura
                 self.dock.buttonSelectLayer.setEnabled(False)
-            
+                self.dock.comboBox_Fix.setEnabled(False)
+        
         else:
             utils.iface.messageBar().pushMessage("Advertencia "," Capa selecionada no valida",level=Qgis.Warning,duration=5)
 
@@ -108,12 +104,17 @@ class Main_Plugin:
         
         if self.connectionList == []: # Si no se encuentra ningun dispositivo gps disponible
             utils.iface.messageBar().pushMessage("Error ","Dispositivo GPS no Conectado",level=Qgis.Critical,duration=3)
-            #self.timerDevice.start(5000)
+            
+            self.timerDevice.start(5000)
             return -1
 
         else:   # Dispositivo gps detectado
             utils.iface.messageBar().pushMessage("OK ","Dispositivo GPS Encontrado",level=Qgis.Info,duration=3)
-            #self.timerDevice.stop()
+            
+            self.timer.start(1000)
+            self.dock.setRotationButton.setEnabled(True)
+            
+            self.timerDevice.stop()
             return 1
 
     def read_Device(self): # Rutina captura y almacenamiento de punto en capa
@@ -124,6 +125,7 @@ class Main_Plugin:
             utils.iface.messageBar().pushMessage("Error ","Perdida Conexion",level=Qgis.Critical,duration=10)
             self.timer.stop()
             self.device = False
+            self.timerDevice.start(5000)
             return -1
         
         # Extraer informacion fecha y hora UTC, calidad de resolucion
@@ -146,7 +148,7 @@ class Main_Plugin:
             angulo = self.rumbo.angle_to(GPSInformation.longitude,GPSInformation.latitude)
             distancia = self.rumbo.distance(GPSInformation.longitude,GPSInformation.latitude)
             
-            if distancia > 0.01:   # Si la distancia es mayor
+            if distancia > 0.1:   # Si la distancia es mayor
                 if self.flatRotationMap == True:
                     utils.iface.mapCanvas().setRotation(360 - angulo)
                     self.rumbo.new_point(GPSInformation.longitude,GPSInformation.latitude)
@@ -191,9 +193,7 @@ class Main_Plugin:
         if self.flatSurveyContinuos == False:
             self.dock.buttonGpsActive.setStyleSheet("QPushButton {background-color : red;}")
             self.dock.buttonGpsActive.setText('Detener')
-            self.dock.comboBox_Fix.setEnabled(False)
             self.dock.buttonGpsDesactive.setEnabled(True)
-            self.dock.buttonSelectLayer.setEnabled(False)
             self.flatSurveyContinuos = True
 
         else:
@@ -202,6 +202,7 @@ class Main_Plugin:
             self.flatSurveyContinuos = False
 
     def stop(self):
+
         self.dock.buttonGpsActive.setStyleSheet("QPushButton{background-color : lightgrey;}")
         self.dock.buttonGpsActive.setText('Captura')
         self.flatSurveyContinuos = False
@@ -211,6 +212,11 @@ class Main_Plugin:
 
     def closePlugin(self):
 
-        self.i = True
-        self.timer.stop()
+        if self.device == True:
+            self.timer.stop()    
+            self.i = True
+
+        else:
+            self.timerDevice.stop()
+        
         self.dock.close()

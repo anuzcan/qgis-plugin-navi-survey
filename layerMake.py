@@ -65,7 +65,7 @@ class layerMake:
 
 				self.layer_to_edit.updateFields()
 				self.layer_to_edit.commitChanges()
-				self.error = False 
+				self.error = False
 
 		else:
 			self.error = True
