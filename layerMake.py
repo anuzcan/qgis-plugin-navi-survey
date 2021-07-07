@@ -34,6 +34,7 @@ class layerMake:
 				layerEPSG = self.layer_to_edit.crs().authid()
 				crsSrc = QgsCoordinateReferenceSystem("EPSG:4326")                      # WGS 84
 				crsDest = QgsCoordinateReferenceSystem(layerEPSG)                       # WGS 84 a WGS de la capa seleccionada
+				
 				transformContext = QgsProject.instance().transformContext()             # Crear instancia de tranformacion
 				self.xform = QgsCoordinateTransform(crsSrc, crsDest, transformContext)  # Crear formulario transformacion
 				
@@ -45,8 +46,8 @@ class layerMake:
 						QgsField(name = "PointName", type = QVariant.String, typeName = "text", len = 20),
 						QgsField(name = "DATE", type = QVariant.String, typeName = "text", len = 12),
 						QgsField(name = "TIME", type = QVariant.String, typeName = "text", len = 10), 
-	                    QgsField(name = "LAT", type = QVariant.Double, typeName = "double", len = 23, prec = 15),
 	                    QgsField(name = "LON", type = QVariant.Double, typeName = "double", len = 23, prec = 15),
+	                    QgsField(name = "LAT", type = QVariant.Double, typeName = "double", len = 23, prec = 15),
 	                    QgsField(name = "ALT", type = QVariant.Double, typeName = "double", len = 7, prec = 3),
 	                    QgsField(name = "FIX_MODE", type = QVariant.String, typeName = "int", len = 6),
 	                    QgsField(name = "SAT_N", type = QVariant.Int, typeName = "int", len = 2)])
@@ -57,8 +58,8 @@ class layerMake:
 						QgsField(name = "PointName", type = QVariant.String, typeName = "text", len = 20),
 						QgsField(name = "DATE", type = QVariant.String, typeName = "text", len = 12),
 						QgsField(name = "TIME", type = QVariant.String, typeName = "text", len = 10), 
-	                    QgsField(name = "LAT", type = QVariant.Double, typeName = "double", len = 23, prec = 15),
 	                    QgsField(name = "LON", type = QVariant.Double, typeName = "double", len = 23, prec = 15),
+	                    QgsField(name = "LAT", type = QVariant.Double, typeName = "double", len = 23, prec = 15),
 	                    QgsField(name = "ALT", type = QVariant.Double, typeName = "double", len = 7, prec = 3),
 	                    QgsField(name = "FIX_MODE", type = QVariant.String, typeName = "text", len = 6),
 	                    QgsField(name = "SAT_N", type = QVariant.Int, typeName = "int", len = 2)])    
@@ -77,7 +78,7 @@ class layerMake:
 			fet = QgsFeature()
 			fet.setGeometry(QgsGeometry.fromPointXY(pt1))
 
-			fet.setAttributes([self.count,name,date,time,y,x,alt,fix_mode,sat_n])
+			fet.setAttributes([self.count,name,date,time,pt1[0],pt1[1],alt,fix_mode,sat_n])
 		
 			self.layer_to_edit.startEditing()
 			self.layer_to_edit.addFeatures([fet])

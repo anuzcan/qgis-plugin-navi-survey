@@ -7,7 +7,7 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QAction, QMessageBox
 
 from qgis import utils
-from qgis.core import Qgis, QgsApplication, QgsProject
+from qgis.core import Qgis, QgsApplication, QgsProject, QgsSettings
 
 #Importacion metodos
 from .layerMake import layerMake, direction, point_pos, guide
@@ -43,32 +43,32 @@ class Main_Plugin:
         select_fixMode = ["FIX","FLOAT","SINGLE"]
         self.dock.comboBox_Fix.addItems(select_fixMode)
 
+        # Bloquemos de botones
+        self.dock.buttonGpsActive.setEnabled(False)
+        self.dock.buttonGpsDesactive.setEnabled(False)
+        self.dock.setRotationButton.setEnabled(False)
+
         #Definicion de banderas
         self.device = False 
         self.flatRotationMap = False
         self.flatSurveyContinuos = False
         self.i = True
 
-    def unload(self): 
-        self.iface.removeToolBarIcon(self.action)
-        del self.action
-
-    def run(self): # Iniciamos plugin en interfaz
-
-        # Bloquemos de botones
-        self.dock.buttonGpsActive.setEnabled(False)
-        self.dock.buttonGpsDesactive.setEnabled(False)
-        self.dock.setRotationButton.setEnabled(False)
-        
         self.timer = QTimer()
         self.timer.timeout.connect(self.read_Device)
 
         self.timerDevice = QTimer()
         self.timerDevice.timeout.connect(self.testSignal)
 
-        self.rumbo = direction(clockwise=True) # Variable para procesar rumbo y distancias entre puntos
+        
+    def unload(self): 
+        self.iface.removeToolBarIcon(self.action)
+        del self.action
 
-        self.device = self.testSignal() # Se comprueba que se disponga de un dispositivo valido conectado
+    def run(self): # Iniciamos plugin en interfaz
+        
+        self.read_setting()        
+        self.testSignal() # Se comprueba que se disponga de un dispositivo valido conectado
         
         #self.guide = guide(self.iface.mapCanvas())
         #self.guide.paint()
@@ -77,6 +77,18 @@ class Main_Plugin:
         #Agregamos panel a interface
         self.iface.addDockWidget( Qt.RightDockWidgetArea, self.dock )
 
+    def read_setting(self):
+
+        s = QgsSettings()
+        indexFilter = s.value("plugin_navi/indexFilter", 0)
+        self.dock.comboBox_Fix.setCurrentIndex(int(indexFilter))
+        self.meterFilter = s.value("plugin_navi/meterFilter", 1)
+        self.dock.meterFilter_edit.setValue(self.meterFilter)
+
+    def store_setting(self):
+        s = QgsSettings()
+        s.setValue("plugin_navi/indexFilter", self.dock.comboBox_Fix.currentIndex())
+        s.setValue("plugin_navi/meterFilter", self.dock.meterFilter_edit.value())
 
     def SelectLayerSurvey(self): # Seleccionar capa para almacenar los puntos colectados
 
@@ -104,16 +116,17 @@ class Main_Plugin:
         
         if self.connectionList == []: # Si no se encuentra ningun dispositivo gps disponible
             utils.iface.messageBar().pushMessage("Error ","Dispositivo GPS no Conectado",level=Qgis.Critical,duration=3)
-            
+            self.dock.setRotationButton.setEnabled(False)
+            self.device = False
             self.timerDevice.start(5000)
             return -1
 
         else:   # Dispositivo gps detectado
             utils.iface.messageBar().pushMessage("OK ","Dispositivo GPS Encontrado",level=Qgis.Info,duration=3)
-            
             self.timer.start(1000)
+            self.device = True
+            self.rumbo = direction(clockwise=True) # Variable para procesar rumbo y distancias entre puntos
             self.dock.setRotationButton.setEnabled(True)
-            
             self.timerDevice.stop()
             return 1
 
@@ -132,8 +145,8 @@ class Main_Plugin:
         now = GPSInformation.utcDateTime.currentDateTime().toString(Qt.TextDate)
         
         quality = GPSInformation.quality
-        date = now[21:]+'-'+now[5:8]+'-'+now[10:12]
-        time = now[12:21]
+        date = now[22:]+'-'+now[5:8]+'-'+now[10:12]
+        time = now[13:21]
         
         # Mostrar calidad de resolucion de informacion GPS
         self.showFix(self.dock.lineEdit,str(quality))
@@ -148,7 +161,8 @@ class Main_Plugin:
             angulo = self.rumbo.angle_to(GPSInformation.longitude,GPSInformation.latitude)
             distancia = self.rumbo.distance(GPSInformation.longitude,GPSInformation.latitude)
             
-            if distancia > 0.1:   # Si la distancia es mayor
+            if distancia > self.meterFilter:   # Si la distancia es mayor a la minima establecida
+
                 if self.flatRotationMap == True:
                     utils.iface.mapCanvas().setRotation(360 - angulo)
                     self.rumbo.new_point(GPSInformation.longitude,GPSInformation.latitude)
@@ -157,7 +171,7 @@ class Main_Plugin:
                     # Almacenamos nuevo punto en la capa seleccionada
                     self.layerSurvey.add_point(date,time,GPSInformation.longitude,GPSInformation.latitude,GPSInformation.elevation,quality,len(GPSInformation.satPrn))
                     
-
+ 
     def zoomInMapCanvas(self):
         utils.iface.mapCanvas().zoomByFactor(0.8)
 
@@ -185,6 +199,7 @@ class Main_Plugin:
 
         else:
             self.dock.setRotationButton.setStyleSheet("QPushButton{background-color : lightgrey;}")
+            utils.iface.mapCanvas().setRotation(0)
             self.flatRotationMap = False
 
     
@@ -219,4 +234,5 @@ class Main_Plugin:
         else:
             self.timerDevice.stop()
         
+        self.store_setting()
         self.dock.close()
