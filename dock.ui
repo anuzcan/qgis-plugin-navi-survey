@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>240</width>
-    <height>320</height>
+    <height>315</height>
    </rect>
   </property>
   <property name="font">
@@ -67,28 +67,15 @@
      <string>Zoom-</string>
     </property>
    </widget>
-   <widget class="QLabel" name="label">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>270</y>
-      <width>120</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Correccion Actual</string>
-    </property>
-   </widget>
    <widget class="QLineEdit" name="lineEdit">
     <property name="enabled">
      <bool>false</bool>
     </property>
     <property name="geometry">
      <rect>
-      <x>120</x>
-      <y>270</y>
-      <width>55</width>
+      <x>124</x>
+      <y>220</y>
+      <width>81</width>
       <height>25</height>
      </rect>
     </property>
@@ -103,7 +90,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>170</y>
+      <y>120</y>
       <width>201</width>
       <height>91</height>
      </rect>
@@ -148,6 +135,42 @@
     </property>
     <property name="text">
      <string>Captura</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="buttonClose_plugin">
+    <property name="geometry">
+     <rect>
+      <x>140</x>
+      <y>10</y>
+      <width>61</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Cerrar</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="comboBox_Fix">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>220</y>
+      <width>91</width>
+      <height>25</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="buttonGpsDesactive">
+    <property name="geometry">
+     <rect>
+      <x>140</x>
+      <y>60</y>
+      <width>61</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Finalizar</string>
     </property>
    </widget>
   </widget>
