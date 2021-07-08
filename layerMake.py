@@ -28,7 +28,7 @@ class layerMake:
 		if self.layer_to_edit.dataProvider().fields().count() > 1:
 			utils.iface.messageBar().pushMessage("Capa seleccionada no Vacia",level=Qgis.Warning,duration=5)
 		
-		if self.layer_to_edit.dataProvider().fields().count() <= 9:
+		if self.layer_to_edit.dataProvider().fields().count() <= 8:
 
 			if layer_type == QgsWkbTypes.PointGeometry:
 				layerEPSG = self.layer_to_edit.crs().authid()
@@ -44,8 +44,7 @@ class layerMake:
 				if self.layer_to_edit.dataProvider().fieldNameIndex("id") == 0 and self.layer_to_edit.dataProvider().fields().count() == 1:
 					self.layer_to_edit.dataProvider().addAttributes([
 						QgsField(name = "PointName", type = QVariant.String, typeName = "text", len = 20),
-						QgsField(name = "DATE", type = QVariant.String, typeName = "text", len = 12),
-						QgsField(name = "TIME", type = QVariant.String, typeName = "text", len = 10), 
+						QgsField(name = "DATE", type = QVariant.String, typeName = "text", len = 30), 
 	                    QgsField(name = "LON", type = QVariant.Double, typeName = "double", len = 23, prec = 15),
 	                    QgsField(name = "LAT", type = QVariant.Double, typeName = "double", len = 23, prec = 15),
 	                    QgsField(name = "ALT", type = QVariant.Double, typeName = "double", len = 7, prec = 3),
@@ -56,8 +55,7 @@ class layerMake:
 					self.layer_to_edit.dataProvider().addAttributes([
 						QgsField(name = "id", type = QVariant.Int, typeName = "int", len = 10),
 						QgsField(name = "PointName", type = QVariant.String, typeName = "text", len = 20),
-						QgsField(name = "DATE", type = QVariant.String, typeName = "text", len = 12),
-						QgsField(name = "TIME", type = QVariant.String, typeName = "text", len = 10), 
+						QgsField(name = "DATE", type = QVariant.String, typeName = "text", len = 30), 
 	                    QgsField(name = "LON", type = QVariant.Double, typeName = "double", len = 23, prec = 15),
 	                    QgsField(name = "LAT", type = QVariant.Double, typeName = "double", len = 23, prec = 15),
 	                    QgsField(name = "ALT", type = QVariant.Double, typeName = "double", len = 7, prec = 3),
@@ -71,14 +69,14 @@ class layerMake:
 		else:
 			self.error = True
 
-	def add_point(self,date,time,x,y,alt,fix_mode,sat_n,name = 'survey'):
+	def add_point(self,date,x,y,alt,fix_mode,sat_n,name = 'survey'):
 		
 		if fix_mode in self.filterPoint:
 			pt1 = self.xform.transform(QgsPointXY(x, y))
 			fet = QgsFeature()
 			fet.setGeometry(QgsGeometry.fromPointXY(pt1))
 
-			fet.setAttributes([self.count,name,date,time,pt1[0],pt1[1],alt,fix_mode,sat_n])
+			fet.setAttributes([self.count,name,date,pt1[0],pt1[1],alt,fix_mode,sat_n])
 		
 			self.layer_to_edit.startEditing()
 			self.layer_to_edit.addFeatures([fet])

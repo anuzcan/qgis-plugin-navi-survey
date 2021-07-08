@@ -100,6 +100,7 @@ class Main_Plugin:
             utils.iface.messageBar().pushMessage("Correcto "," Capa valida",level=Qgis.Info,duration=3)
             
             if self.device == True:
+                self.meterFilter = round(self.dock.meterFilter_edit.value(),2) 
                 self.dock.buttonGpsActive.setEnabled(True) # Habilitamos el inicio de captura
                 self.dock.buttonSelectLayer.setEnabled(False)
                 self.dock.buttonSelectLayer.setStyleSheet("QPushButton {background-color : orange;}")
@@ -142,13 +143,7 @@ class Main_Plugin:
         
         now = GPSInformation.utcDateTime.currentDateTime().toString(Qt.TextDate)    # Extraer informacion fecha y hora UTC, calidad de resolucion
         
-        print(now)
-        
-        quality = GPSInformation.quality
-        date = now[22:]+'-'+now[5:8]+'-'+now[10:12]
-        time = now[13:21]
-        
-        self.showFix(self.dock.lineEdit,str(quality))       # Mostrar calidad de resolucion de informacion GPS
+        self.showFix(self.dock.lineEdit,str(GPSInformation.quality))       # Mostrar calidad de resolucion de informacion GPS
 
         if self.i == True:                                  # condicional para evitar buche de primer dato
             self.rumbo.new_point(GPSInformation.longitude,GPSInformation.latitude)
@@ -158,7 +153,6 @@ class Main_Plugin:
             # Determinamos angulo y distacion con respecto al punto anterior
             angulo = self.rumbo.angle_to(GPSInformation.longitude,GPSInformation.latitude)
             distancia = self.rumbo.distance(GPSInformation.longitude,GPSInformation.latitude)
-            
 
             if distancia >= float(self.meterFilter):         # Si la distancia es mayor a la minima establecida
 
@@ -169,7 +163,8 @@ class Main_Plugin:
                 
                 if self.flatSurveyContinuos == True:
                     # Almacenamos nuevo punto en la capa seleccionada
-                    self.layerSurvey.add_point(date,time,GPSInformation.longitude,GPSInformation.latitude,GPSInformation.elevation,quality,len(GPSInformation.satPrn))
+                    self.layerSurvey.add_point(now,GPSInformation.longitude,GPSInformation.latitude,
+                        GPSInformation.elevation,GPSInformation.quality,len(GPSInformation.satPrn))
                     
 
     def zoomInMapCanvas(self):                              # Rutina acercar mapa
@@ -237,5 +232,6 @@ class Main_Plugin:
         else:
             self.timerDevice.stop()                         # Si dispositivo ausente desabilitar timer busqueda
         
+        self.stop()
         self.store_setting()                                # Almacenar configuraciones
         self.dock.close()                                   # Cierra plugin
