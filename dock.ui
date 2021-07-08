@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>216</width>
-    <height>359</height>
+    <height>417</height>
    </rect>
   </property>
   <property name="font">
@@ -28,7 +28,7 @@
       <x>0</x>
       <y>0</y>
       <width>211</width>
-      <height>331</height>
+      <height>391</height>
      </rect>
     </property>
     <property name="widgetResizable">
@@ -40,7 +40,7 @@
        <x>0</x>
        <y>0</y>
        <width>209</width>
-       <height>329</height>
+       <height>389</height>
       </rect>
      </property>
      <widget class="QPushButton" name="buttonClose_plugin">
@@ -124,7 +124,7 @@
         <x>10</x>
         <y>110</y>
         <width>191</width>
-        <height>141</height>
+        <height>161</height>
        </rect>
       </property>
       <property name="font">
@@ -135,33 +135,11 @@
       <property name="title">
        <string>Seleccione Capa Puntos</string>
       </property>
-      <widget class="QWidget" name="verticalLayoutWidget_5">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>30</y>
-         <width>171</width>
-         <height>58</height>
-        </rect>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_5">
-        <item>
-         <widget class="QgsMapLayerComboBox" name="mMapLayerComboBox"/>
-        </item>
-        <item>
-         <widget class="QPushButton" name="buttonSelectLayer">
-          <property name="text">
-           <string>Activar Capa</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
       <widget class="QComboBox" name="comboBox_Fix">
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>100</y>
+         <y>120</y>
          <width>81</width>
          <height>25</height>
         </rect>
@@ -174,7 +152,7 @@
        <property name="geometry">
         <rect>
          <x>100</x>
-         <y>100</y>
+         <y>120</y>
          <width>81</width>
          <height>25</height>
         </rect>
@@ -184,6 +162,29 @@
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="buttonSelectLayer">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>70</y>
+         <width>169</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Activar Capa</string>
+       </property>
+      </widget>
+      <widget class="QgsMapLayerComboBox" name="mMapLayerComboBox">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>30</y>
+         <width>169</width>
+         <height>31</height>
+        </rect>
        </property>
       </widget>
      </widget>
@@ -233,7 +234,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>260</y>
+        <y>310</y>
         <width>191</width>
         <height>61</height>
        </rect>
@@ -256,13 +257,10 @@
         </font>
        </property>
        <property name="text">
-        <string>Intervalo mts</string>
+        <string>Intervalo</string>
        </property>
       </widget>
       <widget class="QDoubleSpinBox" name="meterFilter_edit">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
        <property name="geometry">
         <rect>
          <x>80</x>
@@ -271,11 +269,6 @@
          <height>26</height>
         </rect>
        </property>
-       <property name="font">
-        <font>
-         <pointsize>9</pointsize>
-        </font>
-       </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
        </property>
@@ -283,10 +276,10 @@
         <enum>QAbstractSpinBox::UpDownArrows</enum>
        </property>
        <property name="suffix">
-        <string/>
+        <string> mts</string>
        </property>
        <property name="decimals">
-        <number>1</number>
+        <number>2</number>
        </property>
        <property name="singleStep">
         <double>0.100000000000000</double>
