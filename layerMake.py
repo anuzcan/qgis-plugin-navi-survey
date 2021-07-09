@@ -20,8 +20,6 @@ class layerMake:
 
 		self.filterPoint = self.setfilter(filt)
 		
-		#print(self.layer_to_edit)
-		#print(layerEPSG)
 		#print(self.layer_to_edit.dataProvider().fields().names())
 		#print(self.layer_to_edit.dataProvider().fields().count())
 
@@ -135,34 +133,45 @@ class direction:
 			return angle if angle > 0 else angle + 360
 
 
-def point_pos(origin, amplitude, angle, rotation=0, clockwise=False):
-	if abs(rotation) > 360:
-		rotation %= 360
-	if clockwise:
-		rotation *= -1
-	if clockwise:
-		angle -= rotation
-		angle = angle if angle > 0 else angle + 360
-	else:
-		angle = (360 - angle if angle > 0 else -1 * angle) - rotation
-		angle = angle if angle > 0 else angle + 360
-
-	theta_rad = math.radians(angle)
-	return int(origin[0] + amplitude * math.sin(theta_rad)), int(origin[1] + amplitude * math.cos(theta_rad))
-
-
-# https://stackoverrun.com/es/q/10271498
-
 class guide:
 	def __init__(self,mapCanvas):
-		#print(mapCanvas.mapSettings().destinationCrs().authid())
-		self.r_polyline = QgsRubberBand(mapCanvas, False)
-		self.r_polyline.setWidth(2)
-		self.r_polyline.setColor(QColor(0, 100, 255))
+
+		crsSrc = QgsCoordinateReferenceSystem("EPSG:4326")          
+		crsDest = QgsCoordinateReferenceSystem("EPSG:3857")                       	# WGS 84 a WGS de la capa seleccionada
+		transformContext = QgsProject.instance().transformContext()             	# Crear instancia de tranformacion
+		self.transformCoord = QgsCoordinateTransform(crsSrc, crsDest, transformContext)  		# Crear formulario transformacion
+		self.invert_transformCoord = QgsCoordinateTransform(crsDest, crsSrc, transformContext)
+		#print(mapCanvas.mapSettings().destinationCrs().authid()) 					# Imprime sistema de coordenadas de el lienzo de trabajo
+		
+		self.r_polyline = QgsRubberBand(mapCanvas, False)					# False = a no poligono a dibujar
+		self.r_polyline.setWidth(2)											# Se define grosor de la linea
+		self.r_polyline.setColor( QColor(0, 100, 255) )						# Color de la linea
 	
-	def paint(self):
-		points = [QgsPoint(-85, 10), QgsPoint(-84, 10.5), QgsPoint(-84, 10.4)]
+	def paint(self, longitud, latitud, angulo):
+
+		origen = self.transformCoord.transform(QgsPointXY(longitud, latitud))
+		proyect_point = self.point_pos(origen,1,angulo,clockwise=True)
+		destino = self.invert_transformCoord.transform(QgsPointXY(proyect_point[0],proyect_point[1]))
+		points = [QgsPoint(longitud, latitud), QgsPoint(destino[0], destino[1])]
 		self.r_polyline.setToGeometry(QgsGeometry.fromPolyline(points), None)
-    
+
 	def erase(self):
 		self.r_polyline.reset(QgsWkbTypes.LineGeometry)
+
+	def point_pos(self, origin, amplitude, angle, rotation=0, clockwise=False):
+		if abs(rotation) > 360:
+			rotation %= 360
+		if clockwise:
+			rotation *= -1
+		if clockwise:
+			angle -= rotation
+			angle = angle if angle > 0 else angle + 360
+		else:
+			angle = (360 - angle if angle > 0 else -1 * angle) - rotation
+			angle = angle if angle > 0 else angle + 360
+
+		theta_rad = math.radians(angle)
+		return float(origin[0] + amplitude * math.sin(theta_rad)), float(origin[1] + amplitude * math.cos(theta_rad))
+
+
+		# https://stackoverrun.com/es/q/10271498
