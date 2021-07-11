@@ -17,55 +17,55 @@ class layerMake:
 		self.layer_to_edit = layer
 		layer_type = self.layer_to_edit.geometryType()
 		self.count = 0
-
+		self.error = 1
 		self.filterPoint = self.setfilter(filt)
 		
-		#print(self.layer_to_edit.dataProvider().fields().names())
-		#print(self.layer_to_edit.dataProvider().fields().count())
+		if layer_type == QgsWkbTypes.PointGeometry:
+			layerEPSG = self.layer_to_edit.crs().authid()
+			crsSrc = QgsCoordinateReferenceSystem("EPSG:4326")                      # WGS 84
+			crsDest = QgsCoordinateReferenceSystem(layerEPSG)                       # WGS 84 a WGS de la capa seleccionada
+				
+			transformContext = QgsProject.instance().transformContext()             # Crear instancia de tranformacion
+			self.xform = QgsCoordinateTransform(crsSrc, crsDest, transformContext)  # Crear formulario transformacion
+				
+			utils.iface.setActiveLayer(self.layer_to_edit)
+			self.layer_to_edit.startEditing()
 
-		if self.layer_to_edit.dataProvider().fields().count() > 1:
-			utils.iface.messageBar().pushMessage("Capa seleccionada no Vacia",level=Qgis.Warning,duration=5)
+			if self.layer_to_edit.dataProvider().fieldNameIndex("id") == 0 and self.layer_to_edit.dataProvider().fields().count() == 1:
+				self.layer_to_edit.dataProvider().addAttributes([
+				QgsField(name = "PointName", type = QVariant.String, typeName = "text", len = 20),
+				QgsField(name = "DATE", type = QVariant.String, typeName = "text", len = 30), 
+	            QgsField(name = "LON", type = QVariant.Double, typeName = "double", len = 23, prec = 15),
+	            QgsField(name = "LAT", type = QVariant.Double, typeName = "double", len = 23, prec = 15),
+	            QgsField(name = "ALT", type = QVariant.Double, typeName = "double", len = 7, prec = 3),
+	            QgsField(name = "FIX_MODE", type = QVariant.String, typeName = "int", len = 6),
+	            QgsField(name = "SAT_N", type = QVariant.Int, typeName = "int", len = 2)])
+				self.error = -1
+
+			elif self.layer_to_edit.dataProvider().fields().count() == 0:
+				self.layer_to_edit.dataProvider().addAttributes([
+					QgsField(name = "id", type = QVariant.Int, typeName = "int", len = 10),
+					QgsField(name = "PointName", type = QVariant.String, typeName = "text", len = 20),
+					QgsField(name = "DATE", type = QVariant.String, typeName = "text", len = 30), 
+	            	QgsField(name = "LON", type = QVariant.Double, typeName = "double", len = 23, prec = 15),
+	            	QgsField(name = "LAT", type = QVariant.Double, typeName = "double", len = 23, prec = 15),
+	            	QgsField(name = "ALT", type = QVariant.Double, typeName = "double", len = 7, prec = 3),
+	            	QgsField(name = "FIX_MODE", type = QVariant.String, typeName = "text", len = 6),
+	            	QgsField(name = "SAT_N", type = QVariant.Int, typeName = "int", len = 2)])
+				self.error = -1
+
+			elif self.layer_to_edit.dataProvider().fields().count() == 8:
+				self.error = -1
+
+			else:
+				self.error = 1
+
+			self.layer_to_edit.updateFields()
+			self.layer_to_edit.commitChanges()			
 		
-		if self.layer_to_edit.dataProvider().fields().count() <= 8:
-
-			if layer_type == QgsWkbTypes.PointGeometry:
-				layerEPSG = self.layer_to_edit.crs().authid()
-				crsSrc = QgsCoordinateReferenceSystem("EPSG:4326")                      # WGS 84
-				crsDest = QgsCoordinateReferenceSystem(layerEPSG)                       # WGS 84 a WGS de la capa seleccionada
-				
-				transformContext = QgsProject.instance().transformContext()             # Crear instancia de tranformacion
-				self.xform = QgsCoordinateTransform(crsSrc, crsDest, transformContext)  # Crear formulario transformacion
-				
-				utils.iface.setActiveLayer(self.layer_to_edit)
-				self.layer_to_edit.startEditing()
-
-				if self.layer_to_edit.dataProvider().fieldNameIndex("id") == 0 and self.layer_to_edit.dataProvider().fields().count() == 1:
-					self.layer_to_edit.dataProvider().addAttributes([
-						QgsField(name = "PointName", type = QVariant.String, typeName = "text", len = 20),
-						QgsField(name = "DATE", type = QVariant.String, typeName = "text", len = 30), 
-	                    QgsField(name = "LON", type = QVariant.Double, typeName = "double", len = 23, prec = 15),
-	                    QgsField(name = "LAT", type = QVariant.Double, typeName = "double", len = 23, prec = 15),
-	                    QgsField(name = "ALT", type = QVariant.Double, typeName = "double", len = 7, prec = 3),
-	                    QgsField(name = "FIX_MODE", type = QVariant.String, typeName = "int", len = 6),
-	                    QgsField(name = "SAT_N", type = QVariant.Int, typeName = "int", len = 2)])
-
-				elif self.layer_to_edit.dataProvider().fields().count() == 0:
-					self.layer_to_edit.dataProvider().addAttributes([
-						QgsField(name = "id", type = QVariant.Int, typeName = "int", len = 10),
-						QgsField(name = "PointName", type = QVariant.String, typeName = "text", len = 20),
-						QgsField(name = "DATE", type = QVariant.String, typeName = "text", len = 30), 
-	                    QgsField(name = "LON", type = QVariant.Double, typeName = "double", len = 23, prec = 15),
-	                    QgsField(name = "LAT", type = QVariant.Double, typeName = "double", len = 23, prec = 15),
-	                    QgsField(name = "ALT", type = QVariant.Double, typeName = "double", len = 7, prec = 3),
-	                    QgsField(name = "FIX_MODE", type = QVariant.String, typeName = "text", len = 6),
-	                    QgsField(name = "SAT_N", type = QVariant.Int, typeName = "int", len = 2)])    
-
-				self.layer_to_edit.updateFields()
-				self.layer_to_edit.commitChanges()
-				self.error = False
-
 		else:
-			self.error = True
+			self.error = 1
+
 
 	def add_point(self,date,x,y,alt,fix_mode,sat_n,name = 'survey'):
 		
@@ -151,8 +151,10 @@ class guide:
 
 		origen = self.transformCoord.transform(QgsPointXY(longitud, latitud))
 		proyect_point = self.point_pos(origen,1,angulo,clockwise=True)
+
 		destino = self.invert_transformCoord.transform(QgsPointXY(proyect_point[0],proyect_point[1]))
 		points = [QgsPoint(longitud, latitud), QgsPoint(destino[0], destino[1])]
+		
 		self.r_polyline.setToGeometry(QgsGeometry.fromPolyline(points), None)
 
 	def erase(self):
@@ -172,6 +174,5 @@ class guide:
 
 		theta_rad = math.radians(angle)
 		return float(origin[0] + amplitude * math.sin(theta_rad)), float(origin[1] + amplitude * math.cos(theta_rad))
-
 
 		# https://stackoverrun.com/es/q/10271498

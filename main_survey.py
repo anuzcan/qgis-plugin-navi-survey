@@ -30,6 +30,7 @@ class Main_Plugin:
         self.dock = uic.loadUi( os.path.join( path, "dock.ui" ) )
         
         # Creamos acciones para los botones y comandos
+        self.dock.buttonIni_plugin.clicked.connect(self.initPlugin)
         self.dock.setRotationButton.clicked.connect(self.rotationMap)
         self.dock.zoomInbutton.clicked.connect(self.zoomInMapCanvas)
         self.dock.zoomOutbutton.clicked.connect(self.zoomOutMapCanvas)
@@ -38,28 +39,30 @@ class Main_Plugin:
         self.dock.buttonGpsDesactive.clicked.connect(self.stop)
         self.dock.setVisualHelp.clicked.connect(self.visual)
         self.dock.buttonClose_plugin.clicked.connect(self.closePlugin)
+        self.dock.meterFilter_edit.valueChanged.connect(self.valueChanged_Filter)
 
         # Rellenar las opciones de captura
         select_fixMode = ["FIX","FLOAT","SINGLE"]
         self.dock.comboBox_Fix.addItems(select_fixMode)
 
         # Botones bloqueados inicialmente
+        self.dock.setRotationButton.setEnabled(False)
+        self.dock.setVisualHelp.setEnabled(False)
         self.dock.buttonGpsActive.setEnabled(False)
         self.dock.buttonGpsDesactive.setEnabled(False)
-        self.dock.setRotationButton.setEnabled(False)
+        self.dock.buttonSelectLayer.setEnabled(False)
+
+        self.read_setting()                                     # Lee configuracion almacenada
 
         #Definicion de banderas
-        self.device = False 
         self.flatRotationMap = False
         self.flatSurveyContinuos = False
         self.flatGuia = False
+        self.layerActive = False
         self.i = True
 
         self.timer = QTimer()                                   # Timer usado para leer dispositivo cada segundo
         self.timer.timeout.connect(self.read_Device)
-
-        self.timerDevice = QTimer()                             # Timer usado para esperar dispositivo se este perdio la conexion
-        self.timerDevice.timeout.connect(self.testSignal)
 
         self.rumbo = direction(clockwise=True)                  # Variable para procesar rumbo y distancias entre puntos
         self.guia_recorrido = guide(self.iface.mapCanvas())     # Manipulador de sistema de guia visual
@@ -71,12 +74,13 @@ class Main_Plugin:
 
     def run(self):                                              # Iniciamos plugin en interfaz
         
-        self.read_setting()                                     # Lee configuracion almacenada        
-        self.testSignal()                                       # Se comprueba que se disponga de un dispositivo valido conectado
-                    
         self.iface.addDockWidget( Qt.RightDockWidgetArea, self.dock )   # Agregamos panel a interface
 
-    def read_setting(self):                                             # Leer configuraciones almacenadas
+    def initPlugin(self):
+
+        self.testSignal()                                       # Se comprueba que se disponga de un dispositivo valido conectado
+
+    def read_setting(self):                                     # Leer configuraciones almacenadas
 
         s = QgsSettings()
         indexFilter = s.value("plugin_navi/indexFilter", 0)
@@ -89,46 +93,26 @@ class Main_Plugin:
         s.setValue("plugin_navi/indexFilter", self.dock.comboBox_Fix.currentIndex())
         s.setValue("plugin_navi/meterFilter", round( self.dock.meterFilter_edit.value(), 2 ))   # El dato en el control se ha de guardar como 2 cifras  
 
-    def SelectLayerSurvey(self):                                # Seleccionar capa para almacenar los puntos colectados
-
-        # Creamos la instancia de capa a editar, pasando la capa seleccionada en el combo_box y el parametro minimo de calidad de resolucion de gps  
-        self.layerSurvey = layerMake( QgsProject().instance().mapLayersByName(self.dock.mMapLayerComboBox.currentText())[0],
-            filt = self.dock.comboBox_Fix.currentText() )        
-
-        if self.layerSurvey.error == False:                     # Comprobamos que la seleccion de la capa sea correcta
-            
-            if self.device == True:                             # Comprobamos que este gps conectado
-                self.meterFilter = round(self.dock.meterFilter_edit.value(),2)                  # tomamos valor de filtro de distancia configurado
-                self.dock.buttonGpsActive.setEnabled(True)                                      # Habilitamos el inicio de captura
-                self.dock.buttonSelectLayer.setEnabled(False)                                   # Deshabilitamos la seleccion de capa
-                self.dock.buttonSelectLayer.setStyleSheet("QPushButton {background-color : orange;}")
-                self.dock.comboBox_Fix.setEnabled(False)                                        # Deshabilitamos seleccionar tomo de solucion gps
-        
-        else:                                                   # Fallo de configuracion de capa selecionada
-            utils.iface.messageBar().pushMessage("Advertencia "," Capa selecionada no valida",level=Qgis.Warning,duration=5)
-
-
     def testSignal(self):                                       # Rutina comprobar GPS Correctamento conectado
 
         self.connectionList = QgsApplication.gpsConnectionRegistry().connectionList()
         
         if self.connectionList == []:                           # Si no se encuentra ningun dispositivo gps disponible
             utils.iface.messageBar().pushMessage("Error ","Dispositivo GPS no Conectado",level=Qgis.Critical,duration=3)
-            self.dock.setRotationButton.setEnabled(False)       # Desahabilita rotacion de mapa
-            
-            self.timerDevice.stop()
-            self.timerDevice.start(10000)
-            
-            self.device = False
+
             return -1
 
         else:                                                   # Dispositivo gps detectado
             utils.iface.messageBar().pushMessage("OK ","Dispositivo GPS Encontrado",level=Qgis.Info,duration=3)
             self.timer.start(1000)                              # Iniciamos lectura de gps capa 1 seg
-            self.timerDevice.stop()                             # Detenemos timer de busqueda de dispositivo
-            self.device = True
 
+            self.dock.buttonIni_plugin.setEnabled(False)
+            self.dock.buttonSelectLayer.setEnabled(True)
             self.dock.setRotationButton.setEnabled(True)        # Habilitamos rotacion de mapa                             
+            self.dock.setVisualHelp.setEnabled(True)
+            if self.layerActive == True:
+                self.dock.buttonGpsActive.setEnabled(True)
+                self.dock.buttonGpsDesactive.setEnabled(True)
             return 1
 
     def read_Device(self):                                      # Rutina captura y almacenamiento de punto en capa
@@ -170,10 +154,34 @@ class Main_Plugin:
         except:                                                 # Si error al leer gps
             utils.iface.messageBar().pushMessage("Error ","Perdida Conexion",level=Qgis.Critical,duration=10)
             self.guia_recorrido.erase()
+            self.timer.stop()
             
-            self.timer.stop()                                   
-            self.timerDevice.start(10000)
+            self.dock.buttonGpsActive.setEnabled(False)
+            self.dock.buttonGpsDesactive.setEnabled(False)
+            self.dock.setRotationButton.setEnabled(False)        # Habilitamos rotacion de mapa                             
+            self.dock.setVisualHelp.setEnabled(False)                                   
+            self.dock.buttonIni_plugin.setEnabled(True)
             return -1
+
+    def valueChanged_Filter(self):
+        self.meterFilter = round(self.dock.meterFilter_edit.value(),2)                  # tomamos valor de filtro de distancia configurado
+
+    def SelectLayerSurvey(self):                                # Seleccionar capa para almacenar los puntos colectados
+
+        # Creamos la instancia de capa a editar, pasando la capa seleccionada en el combo_box y el parametro minimo de calidad de resolucion de gps  
+        self.layerSurvey = layerMake( QgsProject().instance().mapLayersByName(self.dock.mMapLayerComboBox.currentText())[0],
+            filt = self.dock.comboBox_Fix.currentText() )        
+
+        if self.layerSurvey.error == -1:                     # Comprobamos que la seleccion de la capa sea correcta
+            self.dock.buttonGpsActive.setEnabled(True)                                      # Habilitamos el inicio de captura
+            self.dock.buttonSelectLayer.setEnabled(False)                                   # Deshabilitamos la seleccion de capa
+            self.dock.buttonSelectLayer.setStyleSheet("QPushButton {background-color : orange;}")
+            self.dock.comboBox_Fix.setEnabled(False)                                        # Deshabilitamos seleccionar tomo de solucion gps
+            self.i = True
+            self.layerActive = True
+
+        else:                                                   # Fallo de configuracion de capa selecionada
+            utils.iface.messageBar().pushMessage("Advertencia "," Capa selecionada no valida",level=Qgis.Warning,duration=5)
 
         
     def zoomInMapCanvas(self):                              # Rutina acercar mapa
@@ -219,14 +227,12 @@ class Main_Plugin:
         if self.flatSurveyContinuos == False:
             self.dock.buttonGpsActive.setStyleSheet("QPushButton {background-color : red;}")
             self.dock.buttonGpsActive.setText('Detener')
-            
             self.dock.buttonGpsDesactive.setEnabled(True)
             self.flatSurveyContinuos = True                 # Habilita la captura de puntos
 
         else:
             self.dock.buttonGpsActive.setStyleSheet("QPushButton{background-color : lightgrey;}")
             self.dock.buttonGpsActive.setText('Captura')
-            
             self.flatSurveyContinuos = False                # Deshabilita la captura de puntos
 
     def stop(self):                                         # Rutina finalizacion captura de puntos
@@ -244,14 +250,14 @@ class Main_Plugin:
         self.flatSurveyContinuos = False                    # Deshabilita la captura de puntos
 
     def closePlugin(self):                                  # Rutina de finalizacion plugin
-
-        if self.device == True:                             # Si dispositivo activo
-            self.timer.stop()                               # Detener Timer
-            self.i = True                                   # Restablecer primer punto
-
-        else:
-            self.timerDevice.stop()                         # Si dispositivo ausente desabilitar timer busqueda
-        
+    
         self.stop()
+        self.timer.stop()                               # Detener Timer
+        self.i = True                                   # Restablecer primer punto
+        
+        self.dock.buttonIni_plugin.setEnabled(True)
+        self.dock.setRotationButton.setEnabled(False)
+        self.dock.setVisualHelp.setEnabled(False)
+        self.dock.buttonSelectLayer.setEnabled(False)
         self.store_setting()                                # Almacenar configuraciones
         self.dock.close()                                   # Cierra plugin
