@@ -6,7 +6,7 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QAction, QMessageBox
 
 from qgis import utils
-from qgis.core import Qgis, QgsApplication, QgsProject, QgsSettings
+from qgis.core import Qgis, QgsApplication, QgsProject, QgsSettings, QgsMessageLog
 
 from .layerMake import layerMake, direction, guide
 
@@ -40,10 +40,11 @@ class Main_Plugin:
         self.dock.setVisualHelp.clicked.connect(self.visual)
         self.dock.buttonClose_plugin.clicked.connect(self.closePlugin)
         self.dock.meterFilter_edit.valueChanged.connect(self.valueChanged_Filter)
+        self.dock.comboBox_Fix.currentIndexChanged.connect(self.select_fixMode)
 
         # Rellenar las opciones de captura
-        select_fixMode = ["FIX","FLOAT","SINGLE"]
-        self.dock.comboBox_Fix.addItems(select_fixMode)
+        fixMode = ["FIX","FLOAT","SINGLE"]
+        self.dock.comboBox_Fix.addItems(fixMode)
 
         # Botones bloqueados inicialmente
         self.dock.setRotationButton.setEnabled(False)
@@ -51,15 +52,17 @@ class Main_Plugin:
         self.dock.buttonGpsActive.setEnabled(False)
         self.dock.buttonGpsDesactive.setEnabled(False)
         self.dock.buttonSelectLayer.setEnabled(False)
-
+        
         self.read_setting()                                     # Lee configuracion almacenada
 
         #Definicion de banderas
+        self.flatPluginActive = False
+        self.flatGPSactive = False
         self.flatRotationMap = False
         self.flatSurveyContinuos = False
         self.flatGuia = False
         self.layerActive = False
-        self.i = True
+        self.i = False
 
         self.timer = QTimer()                                   # Timer usado para leer dispositivo cada segundo
         self.timer.timeout.connect(self.read_Device)
@@ -72,9 +75,16 @@ class Main_Plugin:
         self.iface.removeToolBarIcon(self.action)
         del self.action
 
-    def run(self):                                              # Iniciamos plugin en interfaz
-        
-        self.iface.addDockWidget( Qt.RightDockWidgetArea, self.dock )   # Agregamos panel a interface
+    def run(self):   
+                                               # Iniciamos plugin en interfaz
+        if self.flatPluginActive:
+            self.closePlugin()
+            self.flatPluginActive =False
+            #QgsMessageLog.logMessage("")
+
+        else:
+            self.iface.addDockWidget( Qt.RightDockWidgetArea, self.dock )   # Agregamos panel a interface
+            self.flatPluginActive = True
 
     def initPlugin(self):
 
@@ -99,21 +109,27 @@ class Main_Plugin:
         
         if self.connectionList == []:                           # Si no se encuentra ningun dispositivo gps disponible
             utils.iface.messageBar().pushMessage("Error ","Dispositivo GPS no Conectado",level=Qgis.Critical,duration=3)
-
-            return -1
+            self.flatGPSactive = False
 
         else:                                                   # Dispositivo gps detectado
             utils.iface.messageBar().pushMessage("OK ","Dispositivo GPS Encontrado",level=Qgis.Info,duration=3)
             self.timer.start(1000)                              # Iniciamos lectura de gps capa 1 seg
 
             self.dock.buttonIni_plugin.setEnabled(False)
-            self.dock.buttonSelectLayer.setEnabled(True)
+            
             self.dock.setRotationButton.setEnabled(True)        # Habilitamos rotacion de mapa                             
             self.dock.setVisualHelp.setEnabled(True)
+            
             if self.layerActive == True:
                 self.dock.buttonGpsActive.setEnabled(True)
                 self.dock.buttonGpsDesactive.setEnabled(True)
-            return 1
+                self.dock.buttonSelectLayer.setEnabled(False)
+            
+            else:
+                self.dock.buttonSelectLayer.setEnabled(True)
+
+            self.flatGPSactive = True
+            
 
     def read_Device(self):                                      # Rutina captura y almacenamiento de punto en capa
         
@@ -123,9 +139,9 @@ class Main_Plugin:
         
             self.showFix( self.dock.lineEdit, GPSInformation.quality )                  # Mostrar calidad de resolucion de informacion GPS
 
-            if self.i == True:                                      # condicional para evitar buche de primer dato
+            if self.i == False:                                      # condicional para evitar buche de primer dato
                 self.rumbo.new_point(GPSInformation.longitude,GPSInformation.latitude)
-                self.i = False
+                self.i = True
             
             else:                                                   # Determinamos angulo y distacion con respecto al punto anterior
                 angulo = self.rumbo.angle_to(GPSInformation.longitude,GPSInformation.latitude)
@@ -138,7 +154,7 @@ class Main_Plugin:
                     if self.flatRotationMap == True:                                        # Rotamos Mapa si se encuentra activada
                         utils.iface.mapCanvas().setRotation(360 - angulo)                   
                     
-                    if self.flatSurveyContinuos == True:                                    
+                    if self.flatSurveyContinuos == True and GPSInformation.quality in self.fix:
                         self.layerSurvey.add_point( now,
                             GPSInformation.longitude,
                             GPSInformation.latitude,
@@ -152,32 +168,36 @@ class Main_Plugin:
                         self.guia_recorrido.paint(GPSInformation.longitude, GPSInformation.latitude, angulo)
 
         except:                                                 # Si error al leer gps
-            utils.iface.messageBar().pushMessage("Error ","Perdida Conexion",level=Qgis.Critical,duration=10)
+            utils.iface.messageBar().pushMessage("Error ","Perdida Conexion",level=Qgis.Critical,duration=5)
             self.guia_recorrido.erase()
             self.timer.stop()
             
             self.dock.buttonGpsActive.setEnabled(False)
             self.dock.buttonGpsDesactive.setEnabled(False)
             self.dock.setRotationButton.setEnabled(False)        # Habilitamos rotacion de mapa                             
+            self.dock.buttonSelectLayer.setEnabled(False)
             self.dock.setVisualHelp.setEnabled(False)                                   
             self.dock.buttonIni_plugin.setEnabled(True)
-            return -1
 
     def valueChanged_Filter(self):
         self.meterFilter = round(self.dock.meterFilter_edit.value(),2)                  # tomamos valor de filtro de distancia configurado
 
+    def select_fixMode(self):
+        self.fix = self.set_filter( self.dock.comboBox_Fix.currentText() )  
+
     def SelectLayerSurvey(self):                                # Seleccionar capa para almacenar los puntos colectados
 
         # Creamos la instancia de capa a editar, pasando la capa seleccionada en el combo_box y el parametro minimo de calidad de resolucion de gps  
-        self.layerSurvey = layerMake( QgsProject().instance().mapLayersByName(self.dock.mMapLayerComboBox.currentText())[0],
-            filt = self.dock.comboBox_Fix.currentText() )        
-
-        if self.layerSurvey.error == -1:                     # Comprobamos que la seleccion de la capa sea correcta
-            self.dock.buttonGpsActive.setEnabled(True)                                      # Habilitamos el inicio de captura
-            self.dock.buttonSelectLayer.setEnabled(False)                                   # Deshabilitamos la seleccion de capa
-            self.dock.buttonSelectLayer.setStyleSheet("QPushButton {background-color : orange;}")
-            self.dock.comboBox_Fix.setEnabled(False)                                        # Deshabilitamos seleccionar tomo de solucion gps
-            self.i = True
+        self.layerSurvey = layerMake( QgsProject().instance().mapLayersByName(self.dock.mMapLayerComboBox.currentText())[0] )        
+        
+        if self.layerSurvey.validate_layer() == True:                     # Comprobamos que la seleccion de la capa sea correcta
+            if self.flatGPSactive:
+                self.dock.buttonGpsActive.setEnabled(True)                                      # Habilitamos el inicio de captura
+                self.dock.buttonGpsDesactive.setEnabled(True)
+                self.dock.buttonSelectLayer.setEnabled(False)                                   # Deshabilitamos la seleccion de capa
+                self.dock.buttonSelectLayer.setStyleSheet("QPushButton {background-color : orange;}")
+            
+            self.i = False
             self.layerActive = True
 
         else:                                                   # Fallo de configuracion de capa selecionada
@@ -228,11 +248,13 @@ class Main_Plugin:
             self.dock.buttonGpsActive.setStyleSheet("QPushButton {background-color : red;}")
             self.dock.buttonGpsActive.setText('Detener')
             self.dock.buttonGpsDesactive.setEnabled(True)
+            self.dock.comboBox_Fix.setEnabled(False)
             self.flatSurveyContinuos = True                 # Habilita la captura de puntos
 
         else:
             self.dock.buttonGpsActive.setStyleSheet("QPushButton{background-color : lightgrey;}")
             self.dock.buttonGpsActive.setText('Captura')
+            self.dock.comboBox_Fix.setEnabled(True)
             self.flatSurveyContinuos = False                # Deshabilita la captura de puntos
 
     def stop(self):                                         # Rutina finalizacion captura de puntos
@@ -244,15 +266,27 @@ class Main_Plugin:
         
         self.dock.buttonSelectLayer.setEnabled(True)
         self.dock.buttonSelectLayer.setStyleSheet("QPushButton {background-color : lightgrey;}")
-        
         self.dock.comboBox_Fix.setEnabled(True)
+
         self.guia_recorrido.erase()
         self.flatSurveyContinuos = False                    # Deshabilita la captura de puntos
+
+    def set_filter(self,Filter):
+
+        if Filter == 'FIX':
+            return [4]
+
+        elif Filter == 'FLOAT':
+            return [5,4]
+
+        elif Filter == 'SINGLE':
+            return [-1,1,5,4]
 
     def closePlugin(self):                                  # Rutina de finalizacion plugin
     
         self.stop()
         self.timer.stop()                               # Detener Timer
+        self.flatPluginActive =False
         self.i = True                                   # Restablecer primer punto
         
         self.dock.buttonIni_plugin.setEnabled(True)
