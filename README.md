@@ -31,6 +31,7 @@ En Linux:
 - [ ] Pruebas de Campo
 - [x] Rotacion de mapa en tiempo real
 - [ ] Calculo de area
+- [x] Implementar guia visual de recorrido
 
 ### Version Control
 

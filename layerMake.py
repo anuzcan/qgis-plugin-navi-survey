@@ -22,7 +22,7 @@ class layerMake:
 		layer_type = self.layer_to_edit.geometryType()
 		
 		if layer_type == QgsWkbTypes.PointGeometry:
-			print("test")
+			
 			layerEPSG = self.layer_to_edit.crs().authid()
 			crsSrc = QgsCoordinateReferenceSystem("EPSG:4326")                      # WGS 84
 			crsDest = QgsCoordinateReferenceSystem(layerEPSG)                       # WGS 84 a WGS de la capa seleccionada
@@ -143,7 +143,7 @@ class guide:
 	def paint(self, longitud, latitud, angulo):
 
 		origen = self.transformCoord.transform(QgsPointXY(longitud, latitud))
-		proyect_point = self.point_pos(origen,1,angulo,clockwise=True)
+		proyect_point = self.point_pos(origen,3,angulo,clockwise=True)
 
 		destino = self.invert_transformCoord.transform(QgsPointXY(proyect_point[0],proyect_point[1]))
 		points = [QgsPoint(longitud, latitud), QgsPoint(destino[0], destino[1])]
