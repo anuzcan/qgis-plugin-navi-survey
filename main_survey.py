@@ -1,12 +1,12 @@
 import os
 
 from PyQt5 import uic
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, QDateTime
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QAction, QMessageBox
 
 from qgis import utils
-from qgis.core import Qgis, QgsApplication, QgsProject, QgsSettings, QgsMessageLog
+from qgis.core import Qgis, QgsApplication, QgsProject, QgsSettings, QgsMessageLog, QgsVectorLayer
 
 from .layerMake import layerMake, direction, guide
 
@@ -35,6 +35,7 @@ class Main_Plugin:
         self.dock.zoomInbutton.clicked.connect(self.zoomInMapCanvas)
         self.dock.zoomOutbutton.clicked.connect(self.zoomOutMapCanvas)
         self.dock.buttonSelectLayer.clicked.connect(self.SelectLayerSurvey)
+        self.dock.buttonCreateLayer.clicked.connect(self.CreateLayerSurvey)
         self.dock.buttonGpsActive.clicked.connect(self.start_Read)
         self.dock.buttonGpsDesactive.clicked.connect(self.stop)
         self.dock.setVisualHelp.clicked.connect(self.visual)
@@ -64,9 +65,6 @@ class Main_Plugin:
         self.layerActive = False
         self.firt_point = False
 
-
-        self.rumbo = direction(clockwise=True)                  # Variable para procesar rumbo y distancias entre puntos
-        self.guia_recorrido = guide(self.iface.mapCanvas())     # Manipulador de sistema de guia visual
 
         #self.timer = QTimer()
         #self.timer.timeout.connect(self.funcion)
@@ -118,6 +116,9 @@ class Main_Plugin:
         else:                                                   # Dispositivo gps detectado
             utils.iface.messageBar().pushMessage("OK ","Dispositivo GPS Encontrado",level=Qgis.Info,duration=3)
 
+            self.rumbo = direction(clockwise=True)                  # Variable para procesar rumbo y distancias entre puntos
+            self.guia_recorrido = guide(self.iface.mapCanvas())     # Manipulador de sistema de guia visual
+
             self.GPS = self.connectionList[0]                   # Identifica coneccion activa
             self.GPS.stateChanged.connect(self.status_changed)  # Conecta signal con recepcion de dato nuevo
             self.GPS.destroyed.connect(self.connectionLost)     # En caso de desconeccion dispara rutina
@@ -143,6 +144,8 @@ class Main_Plugin:
             now = gpsInfo.utcDateTime.currentDateTime().toString(Qt.TextDate)
             self.showFix( self.dock.lineEdit, gpsInfo.quality )
             
+            #print(gpsInfo.vacc)
+
             if self.firt_point == False:                                      # condicional para evitar buche de primer dato
                 self.rumbo.new_point(gpsInfo.longitude,gpsInfo.latitude)
                 self.firt_point = True
@@ -181,6 +184,8 @@ class Main_Plugin:
 
         utils.iface.messageBar().pushMessage("Error ","Perdida Conexion",level=Qgis.Critical,duration=5)
         self.guia_recorrido.erase()
+        self.firt_point = False
+        self.flatGPSactive = False
         
         self.dock.buttonGpsActive.setEnabled(False)
         self.dock.buttonGpsDesactive.setEnabled(False)
@@ -207,14 +212,22 @@ class Main_Plugin:
                 self.dock.buttonGpsDesactive.setEnabled(True)
                 self.dock.buttonSelectLayer.setEnabled(False)                                   # Deshabilitamos la seleccion de capa
                 self.dock.buttonSelectLayer.setStyleSheet("QPushButton {background-color : orange;}")
-            
+                self.dock.buttonCreateLayer.setEnabled(False)
+
             self.firt_point = False
             self.layerActive = True
 
         else:                                                   # Fallo de configuracion de capa selecionada
             utils.iface.messageBar().pushMessage("Advertencia "," Capa selecionada no valida",level=Qgis.Warning,duration=5)
 
-        
+    def CreateLayerSurvey(self):
+        datetime = QDateTime.currentDateTime().toString()
+        datetime = datetime.split(" ")
+        name = "Puntos_" + datetime[1] + "/" + datetime[2] + "/" + datetime[4] + "_" + datetime[3]
+        mem_layer = QgsVectorLayer("Point?crs=epsg:3857",name,"memory")
+        QgsProject.instance().addMapLayer(mem_layer)
+        utils.iface.setActiveLayer(mem_layer)
+    
     def zoomInMapCanvas(self):                              # Rutina acercar mapa
         utils.iface.mapCanvas().zoomByFactor(0.8)
 
@@ -278,8 +291,8 @@ class Main_Plugin:
         self.dock.buttonSelectLayer.setEnabled(True)
         self.dock.buttonSelectLayer.setStyleSheet("QPushButton {background-color : lightgrey;}")
         self.dock.comboBox_Fix.setEnabled(True)
-
-        self.guia_recorrido.erase()
+        self.dock.buttonCreateLayer.setEnabled(True)
+        
         self.flatSurveyContinuos = False                    # Deshabilita la captura de puntos
 
     def set_filter(self,Filter):
@@ -298,17 +311,16 @@ class Main_Plugin:
         self.stop()
 
         self.flatPluginActive =False
-        self.firt_point = True                                   # Restablecer primer punto
+        self.firt_point = False                                   # Restablecer primer punto
         
         self.dock.buttonIni_plugin.setEnabled(True)
         self.dock.setRotationButton.setEnabled(False)
         self.dock.setVisualHelp.setEnabled(False)
         self.dock.buttonSelectLayer.setEnabled(False)
 
-        try:
+        if self.flatGPSactive:
             self.GPS.stateChanged.disconnect(self.status_changed)
-        except:
-            pass
-
+            self.guia_recorrido.erase()
+        
         self.store_setting()                                # Almacenar configuraciones
         self.dock.close()                                   # Cierra plugin

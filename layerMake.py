@@ -129,12 +129,14 @@ class direction:
 class guide:
 	def __init__(self,mapCanvas):
 
-		crsSrc = QgsCoordinateReferenceSystem("EPSG:4326")          
-		crsDest = QgsCoordinateReferenceSystem("EPSG:3857")                       	# WGS 84 a WGS de la capa seleccionada
+		crsMap = QgsCoordinateReferenceSystem(mapCanvas.mapSettings().destinationCrs().authid())
+		crsGps = QgsCoordinateReferenceSystem("EPSG:4326")          
+		crsCalc = QgsCoordinateReferenceSystem("EPSG:3857")                       	# WGS 84 a WGS de la capa seleccionada
+		
 		transformContext = QgsProject.instance().transformContext()             	# Crear instancia de tranformacion
-		self.transformCoord = QgsCoordinateTransform(crsSrc, crsDest, transformContext)  		# Crear formulario transformacion
-		self.invert_transformCoord = QgsCoordinateTransform(crsDest, crsSrc, transformContext)
-		#print(mapCanvas.mapSettings().destinationCrs().authid()) 					# Imprime sistema de coordenadas de el lienzo de trabajo
+		self.gps_to_calc_transformCoord = QgsCoordinateTransform(crsGps, crsCalc, transformContext)  		# Crear formulario transformacion
+		self.gps_to_map_transformCoord = QgsCoordinateTransform(crsGps, crsMap, transformContext)
+		self.calc_to_map_transformCoord = QgsCoordinateTransform(crsCalc, crsMap, transformContext)
 		
 		self.r_polyline = QgsRubberBand(mapCanvas, False)					# False = a no poligono a dibujar
 		self.r_polyline.setWidth(2)											# Se define grosor de la linea
@@ -142,18 +144,58 @@ class guide:
 	
 	def paint(self, longitud, latitud, angulo):
 
-		origen = self.transformCoord.transform(QgsPointXY(longitud, latitud))
-		proyect_point = self.point_pos(origen,3,angulo,clockwise=True)
+		points = []
 
-		destino = self.invert_transformCoord.transform(QgsPointXY(proyect_point[0],proyect_point[1]))
-		points = [QgsPoint(longitud, latitud), QgsPoint(destino[0], destino[1])]
+		pxOrigen, pyOrigen = QgsPointXY(longitud, latitud)
+		px_calc, py_calc = self.gps_to_calc_transformCoord.transform(QgsPointXY(pxOrigen, pyOrigen))
 		
+		px_calc, py_calc = self.point_pos(px_calc, py_calc, 1, angulo - 180,clockwise=True)
+		px_map, py_map = self.calc_to_map_transformCoord.transform(QgsPointXY(px_calc, py_calc))
+
+		points.append(QgsPoint(px_map, py_map))
+
+		px_calc, py_calc = self.point_pos(px_calc, py_calc,3,angulo,clockwise=True)
+		px_map, py_map = self.calc_to_map_transformCoord.transform(QgsPointXY(px_calc, py_calc))
+
+		points.append(QgsPoint(px_map, py_map))
+
+		px_calc, py_calc = self.point_pos(px_calc, py_calc,1,angulo - 90,clockwise=True)
+		px_map, py_map = self.calc_to_map_transformCoord.transform(QgsPointXY(px_calc, py_calc))
+
+		points.append(QgsPoint(px_map, py_map))
+
+		px_calc, py_calc = self.point_pos(px_calc, py_calc,2,angulo + 90,clockwise=True)
+		px_map, py_map = self.calc_to_map_transformCoord.transform(QgsPointXY(px_calc, py_calc))
+
+		points.append(QgsPoint(px_map, py_map))
+
+		px_calc, py_calc = self.point_pos(px_calc, py_calc,1,angulo - 90,clockwise=True)
+		px_map, py_map = self.calc_to_map_transformCoord.transform(QgsPointXY(px_calc, py_calc))
+
+		points.append(QgsPoint(px_map, py_map))
+
+		px_calc, py_calc = self.point_pos(px_calc, py_calc,3,angulo,clockwise=True)
+		px_map, py_map = self.calc_to_map_transformCoord.transform(QgsPointXY(px_calc, py_calc))
+
+		points.append(QgsPoint(px_map, py_map))
+
+		px_calc, py_calc = self.point_pos(px_calc, py_calc,2,angulo - 90,clockwise=True)
+		px_map, py_map = self.calc_to_map_transformCoord.transform(QgsPointXY(px_calc, py_calc))
+
+		points.append(QgsPoint(px_map, py_map))
+
+		px_calc, py_calc = self.point_pos(px_calc, py_calc,4,angulo + 90,clockwise=True)
+		px_map, py_map = self.calc_to_map_transformCoord.transform(QgsPointXY(px_calc, py_calc))
+
+		points.append(QgsPoint(px_map, py_map))
+		
+
 		self.r_polyline.setToGeometry(QgsGeometry.fromPolyline(points), None)
 
 	def erase(self):
 		self.r_polyline.reset(QgsWkbTypes.LineGeometry)
 
-	def point_pos(self, origin, amplitude, angle, rotation=0, clockwise=False):
+	def point_pos(self, x, y, amplitude, angle, rotation=0, clockwise=False):
 		if abs(rotation) > 360:
 			rotation %= 360
 		if clockwise:
@@ -166,6 +208,6 @@ class guide:
 			angle = angle if angle > 0 else angle + 360
 
 		theta_rad = math.radians(angle)
-		return float(origin[0] + amplitude * math.sin(theta_rad)), float(origin[1] + amplitude * math.cos(theta_rad))
+		return float(x + amplitude * math.sin(theta_rad)), float(y + amplitude * math.cos(theta_rad))
 
 		# https://stackoverrun.com/es/q/10271498
