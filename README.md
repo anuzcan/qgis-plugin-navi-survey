@@ -28,7 +28,7 @@ En Linux:
 
 - [x] Configurar acceso a informacion GPS
 - [x] Filtro de calidad de puntos
-- [ ] Pruebas de Campo
+- [x] Pruebas de Campo
 - [x] Rotacion de mapa en tiempo real
 - [ ] Calculo de area
 - [x] Implementar guia visual de recorrido
