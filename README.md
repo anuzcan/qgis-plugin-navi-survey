@@ -26,14 +26,12 @@ En Linux:
 
 	/home/username/.local/share/QGIS/QGIS3/profiles/default/python/plugins/
 
-- [x] Configurar acceso a informacion GPS
-- [x] Filtro de calidad de puntos
-- [x] Pruebas de Campo
-- [x] Rotacion de mapa en tiempo real
-- [ ] Calculo de area
-- [x] Implementar guia visual de recorrido
-
 ### Version Control
 
 - 1.0
 
+Actualizaciones
+
+13/04/2022
+
+- Mejoras en el sistema de guiado de ruta

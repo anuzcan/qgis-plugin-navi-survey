@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QAction, QMessageBox
 from qgis import utils
 from qgis.core import Qgis, QgsApplication, QgsProject, QgsSettings, QgsMessageLog, QgsVectorLayer
 
-from .layerMake import layerMake, direction, guide
+from .layerMake import layerMake, direction_tools
 
 def classFactory(iface):
 	return Main_Plugin(iface)
@@ -23,6 +23,7 @@ class Main_Plugin:
 		path = os.path.dirname( os.path.abspath( __file__ ) )
 		icon_path = os.path.join(path,"icon.png")
 		self.action = QAction(QIcon(icon_path),"&Navegacion Herramienta",self.iface.mainWindow())
+		self.iface.vectorMenu().addAction(self.action)
 		self.iface.addToolBarIcon(self.action)
 		self.action.triggered.connect(self.run)
 
@@ -73,6 +74,7 @@ class Main_Plugin:
 	def unload(self): 
 
 		self.iface.removeToolBarIcon(self.action)
+		self.iface.vectorMenu().removeAction(self.action)
 		del self.action
 
 	def run(self):					# Iniciamos plugin en interfaz
@@ -115,8 +117,7 @@ class Main_Plugin:
 		else:                                                   # Dispositivo gps detectado
 			utils.iface.messageBar().pushMessage("OK ","Dispositivo GPS Encontrado",level=Qgis.Info,duration=3)
 
-			self.rumbo = direction(clockwise=True)                  # Variable para procesar rumbo y distancias entre puntos
-			self.guia_recorrido = guide(self.iface.mapCanvas())     # Manipulador de sistema de guia visual
+			self.rumbo = direction_tools(self.iface.mapCanvas())                  # Variable para procesar rumbo y distancias entre puntos
 
 			self.GPS = self.connectionList[0]                   # Identifica coneccion activa
 			self.GPS.stateChanged.connect(self.status_changed)  # Conecta signal con recepcion de dato nuevo
@@ -145,27 +146,22 @@ class Main_Plugin:
             
 			#print(gpsInfo.vacc)
 
-			if self.firt_point == False:                                      # condicional para evitar buche de primer dato
-				self.rumbo.new_point(gpsInfo.longitude,gpsInfo.latitude)
-				self.firt_point = True
-            
-			else:                                                   # Determinamos angulo y distacion con respecto al punto anterior
-				angulo = self.rumbo.angle_to(gpsInfo.longitude,gpsInfo.latitude)
-				distancia = self.rumbo.distance(gpsInfo.longitude,gpsInfo.latitude)
-                
-				if distancia >= self.meterFilter:                                           # Si la distancia es mayor a la minima establecida
+			if self.rumbo.new_point(gpsInfo.longitude,gpsInfo.latitude, self.meterFilter):  # Si la distancia es mayor a la minima establecida
+				
+				if self.flatRotationMap == True:                                        # Rotamos Mapa si se encuentra activada
+					angle_rotation = self.rumbo.angle_to() + 90			# Sumar 90° a causa de referencia de qgis
+					angle_rotation += 180 						# Sumar 180° para invertir rumbo
 
-					self.rumbo.new_point(gpsInfo.longitude,gpsInfo.latitude)  # Sustituimos ultimo punto
+					if angle_rotation > 360:
+						angle_rotation %= 360
+					utils.iface.mapCanvas().setRotation(angle_rotation)
 
-					if self.flatRotationMap == True:                                        # Rotamos Mapa si se encuentra activada
-						utils.iface.mapCanvas().setRotation(360 - angulo)                   
-                    
-					if self.flatSurveyContinuos == True and gpsInfo.quality in self.fix:
-						self.layerSurvey.add_point( now, gpsInfo.longitude, gpsInfo.latitude, gpsInfo.elevation, gpsInfo.quality, len(gpsInfo.satPrn))
+				if self.flatSurveyContinuos == True and gpsInfo.quality in self.fix:
+					self.layerSurvey.add_point( now, gpsInfo.longitude, gpsInfo.latitude, gpsInfo.elevation, gpsInfo.quality, len(gpsInfo.satPrn))
 
-					if self.flatGuia == True:                   # Rutina de guia visual del recorrido
-						self.guia_recorrido.erase()             # borramos lineas anteriores
-						self.guia_recorrido.paint(gpsInfo.longitude, gpsInfo.latitude, angulo)                
+				if self.flatGuia == True:                   # Rutina de guia visual del recorrido
+					self.rumbo.erase()             # borramos lineas anteriores
+					self.rumbo.paint()                
         
 	def connectionLost(self):
 
@@ -175,7 +171,7 @@ class Main_Plugin:
 			pass
 
 		utils.iface.messageBar().pushMessage("Error ","Perdida Conexion",level=Qgis.Critical,duration=5)
-		self.guia_recorrido.erase()
+		self.rumbo.erase()
 		self.firt_point = False
 		self.flatGPSactive = False
         
@@ -253,7 +249,7 @@ class Main_Plugin:
 			self.dock.setVisualHelp.setStyleSheet("QPushButton {background-color : orange;}")
 			self.flatGuia = True
 		else:
-			self.guia_recorrido.erase()
+			self.rumbo.erase()
 			self.dock.setVisualHelp.setStyleSheet("QPushButton {background-color : lightgrey;}")
 			self.flatGuia = False
 
@@ -310,7 +306,7 @@ class Main_Plugin:
 
 		if self.flatGPSactive:
 			self.GPS.stateChanged.disconnect(self.status_changed)
-			self.guia_recorrido.erase()
+			self.rumbo.erase()
         
 		self.store_setting()                                # Almacenar configuraciones
 		self.dock.close()                                   # Cierra plugin
