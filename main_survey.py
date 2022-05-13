@@ -1,7 +1,7 @@
 import os
 
 from PyQt5 import uic
-from PyQt5.QtCore import Qt, QTimer, QDateTime
+from PyQt5.QtCore import Qt, QDateTime
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QAction, QMessageBox
 
@@ -55,8 +55,6 @@ class Main_Plugin:
 		self.dock.buttonGpsDesactive.setEnabled(False)
 		self.dock.buttonSelectLayer.setEnabled(False)
         
-		self.read_setting()                                     # Lee configuracion almacenada
-
 		#Definicion de banderas
 		self.flatPluginActive = False
 		self.flatGPSactive = False
@@ -65,11 +63,6 @@ class Main_Plugin:
 		self.flatGuia = False
 		self.layerActive = False
 		self.firt_point = False
-
-		#self.timer = QTimer()
-		#self.timer.timeout.connect(self.funcion)
-		#self.timer.start(1000)
-		#self.timer.stop()
 
 	def unload(self): 
 
@@ -85,6 +78,7 @@ class Main_Plugin:
 		
 		else:
 			self.iface.addDockWidget( Qt.RightDockWidgetArea, self.dock )   # Agregamos panel a interface
+			self.read_setting()                                     # Lee configuracion almacenada
 			self.testSignal()
 			self.flatPluginActive = True
 

@@ -7,9 +7,8 @@ from qgis.core import (Qgis,
     QgsField, QgsCoordinateReferenceSystem, 
     QgsCoordinateTransform,
     QgsPoint)
-from PyQt5.QtCore import QVariant
+from PyQt5.QtCore import QVariant, Qt
 from PyQt5.QtGui import QColor
-
 
 class layerMake:
 	def __init__(self,layer, point_ID = 'survey'):
@@ -102,8 +101,13 @@ class direction_tools:
 		self.calc_to_map_transformCoord = QgsCoordinateTransform(crsCalc, crsMap, transformContext)
 		
 		self.r_polyline = QgsRubberBand(mapCanvas, False)					# False = a no poligono a dibujar
-		self.r_polyline.setWidth(1)											# Se define grosor de la linea
-		self.r_polyline.setColor( QColor(0, 100, 255) )						# Color de la linea
+		self.r_polyline.setWidth(2)								# Se define grosor de la linea
+		self.r_polyline.setColor( QColor(0, 255, 0) )						# Color de la linea
+		
+		self.proj_polyline = QgsRubberBand(mapCanvas, False)					# False = a no poligono a dibujar
+		self.proj_polyline.setWidth(3)
+		self.proj_polyline.setLineStyle(Qt.PenStyle(Qt.DotLine))						# Se define grosor de la linea
+		self.proj_polyline.setColor( QColor(255, 0, 0) )		
 		
 		self.point_list = [] 
 		self.desplazamiento = 0
@@ -159,25 +163,25 @@ class direction_tools:
 			if angle1 < 0: angle1 = 360 - abs(angle1)
 			if angle2 < 0: angle2 = 360 - abs(angle2)
 			
-			angle = ((angle1 - angle2) + angle1)
+			Delta_angle = angle1 - angle2
+			angle = Delta_angle + angle1
 			
 			if angle < 0 : angle = 360 - abs(angle)
 			if angle >= 360: angle %= 360
-			return angle
-
+			return angle, Delta_angle
+		
 		else:
-			return 0
+			return 0, 0
 	
 	def point_pos(self, point, distance, angle):
 		theta_rad = math.radians(angle)
-  
 		return float(point[0] + distance * math.cos(theta_rad)), float(point[1] + distance * math.sin(theta_rad))
 
 	def paint(self):
 		if len(self.point_list) >=3:
 			points = []
 			pt0, pt1, pt2 = self.point_list	
-			angle = self.angle_pos()
+			angle, delta_angle = self.angle_pos()
 			distance = self.desplazamiento
 		
 			px_map, py_map = self.calc_to_map_transformCoord.transform(pt2)
@@ -188,21 +192,35 @@ class direction_tools:
 			
 			px_map, py_map = self.calc_to_map_transformCoord.transform(pt0)
 			points.append(QgsPoint(px_map, py_map))
+		
+			self.r_polyline.setToGeometry(QgsGeometry.fromPolyline(points), None)
+			points = []
 			
+			# Puntos Proyectados
+ 
+			points.append(QgsPoint(px_map, py_map))
 			x, y = self.point_pos(pt0, distance, angle)
-	
 			px_map, py_map = self.calc_to_map_transformCoord.transform(QgsPointXY(x, y))			
 			points.append(QgsPoint(px_map, py_map))
 			
-			#x, y = self.point_pos([x,y], distance, rote)
+			angle = delta_angle + angle
+			x, y = self.point_pos([x,y], distance, angle)
+			px_map, py_map = self.calc_to_map_transformCoord.transform(QgsPointXY(x, y))			
+			points.append(QgsPoint(px_map, py_map))		
 			
-			#px_map, py_map = self.calc_to_map_transformCoord.transform(QgsPointXY(x, y))			
-			#points.append(QgsPoint(px_map, py_map))
-	
-			self.r_polyline.setToGeometry(QgsGeometry.fromPolyline(points), None)
+			angle = delta_angle + angle
+			x, y = self.point_pos([x,y], distance, angle)
+			px_map, py_map = self.calc_to_map_transformCoord.transform(QgsPointXY(x, y))			
+			points.append(QgsPoint(px_map, py_map))	
+			
+			angle = delta_angle + angle
+			x, y = self.point_pos([x,y], distance/4, angle - 135)
+			px_map, py_map = self.calc_to_map_transformCoord.transform(QgsPointXY(x, y))			
+			points.append(QgsPoint(px_map, py_map))
 
+			self.proj_polyline.setToGeometry(QgsGeometry.fromPolyline(points), None)
 
 	def erase(self):
 		self.r_polyline.reset(QgsWkbTypes.LineGeometry)
-
+		self.proj_polyline.reset(QgsWkbTypes.LineGeometry)
 	

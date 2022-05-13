@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/QGIS-navi-survey-plugin" >
+       <file>icon.png</file>
+    </qresource>
+</RCC>
